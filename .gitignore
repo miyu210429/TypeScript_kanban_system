@@ -1,0 +1,11 @@
+# 依存パッケージ
+node_modules/
+
+# ビルド成果物
+dist/
+
+# 環境変数ファイル
+.env
+
+# Mac 系の不要ファイル
+.DS_Store
