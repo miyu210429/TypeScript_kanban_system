@@ -10,6 +10,24 @@ interface Task {
 }
 
 
+abstract class UIComponent<T extends HTMLElement> {
+    templateEl: HTMLTemplateElement;
+    element: T;
+
+    constructor(templateId: string) {
+        this.templateEl = document.querySelector(templateId)!;
+        const clone = this.templateEl.content.cloneNode(true) as DocumentFragment;
+        this.element = clone.firstElementChild as T;
+    }
+
+    mount(selector: string) {
+        const targetEl = document.querySelector(selector)!;
+        targetEl.insertAdjacentElement("beforeend", this.element);
+    }
+
+    abstract setup(): void;
+}
+
 class TaskForm {
     element: HTMLFormElement;
     titleInputEl: HTMLInputElement;
@@ -35,7 +53,6 @@ class TaskForm {
         this.descriptionInputEl.value = '';
     }
 
-    @bound
     private submitHandler(event: Event) {
         event.preventDefault();
 
@@ -43,9 +60,6 @@ class TaskForm {
 
         const item = new TaskItem('#task-item-template', task);
         item.mount("#todo");
-
-        console.log(this.titleInputEl.value);
-        console.log(this.descriptionInputEl.value);
 
         this.clearInputs();
     }
@@ -55,17 +69,10 @@ class TaskForm {
     }
 }
 
-class TaskList {
-    templateEl: HTMLTemplateElement;
-    element: HTMLDivElement;
-    private taskStatus: TaskStatus;
-
-    constructor(templateId: string, _taskStatus: TaskStatus) {
-        this.templateEl = document.querySelector(templateId)!;
-        const clone = this.templateEl.content.cloneNode(true) as DocumentFragment;
-        this.element = clone.firstElementChild as HTMLDivElement;
-        this.taskStatus = _taskStatus;
-
+class TaskList extends UIComponent<HTMLDivElement> {
+    
+    constructor(private taskStatus: TaskStatus) {
+        super('#task-list-template');
         this.setup();
     }
 
@@ -75,25 +82,20 @@ class TaskList {
     }
 }
 
-
-class TaskItem {
-    templateEl: HTMLTemplateElement;
+interface ClickableElement{
     element: HTMLLIElement;
+    clickHandler(event:MouseEvent) : void;
+    bindEvents(): void;
+}
+
+class TaskItem extends UIComponent<HTMLLIElement> implements ClickableElement {
     task: Task;
 
     constructor(templateId: string, _task: Task) {
-        this.templateEl = document.querySelector(templateId)!;
-        const clone = this.templateEl.content.cloneNode(true) as DocumentFragment;
-        this.element = clone.firstElementChild as HTMLLIElement;
-
+        super("#task-item-template");
         this.task = _task;
         this.setup();
         this.bindEvents();
-    }
-
-    mount(selector: string) {
-        const targetEl = document.querySelector(selector)!;
-        targetEl.insertAdjacentElement("beforeend",this.element);
     }
 
     setup() {
@@ -131,10 +133,10 @@ class TaskItem {
         this.element.addEventListener('click', this.clickHandler);
     }
 }
-const container = document.querySelector('#container')!;
-(['todo', 'working', 'done'] as const).forEach(status => {
-  const list = new TaskList('#task-list-template', status);
-  container.appendChild(list.element);  // ← ここでDOMに配置
-});
 
 new TaskForm();
+
+TASK_STATUS.forEach(status => {
+    const taskList = new TaskList(status);
+    taskList.mount('#container');
+});
